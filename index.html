@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cyber Ops Antivirus Console</title>
+  <style>
+    :root {
+      --bg: #02040a;
+      --panel: #050915;
+      --accent: #00ff9c;
+      --accent-soft: rgba(0, 255, 156, 0.15);
+      --accent-strong: #00ffc8;
+      --danger: #ff3366;
+      --warning: #ffcc33;
+      --text-main: #e5f5ff;
+      --text-soft: #7f9bb5;
+      --border-soft: #1a2435;
+      --grid: rgba(0, 255, 156, 0.06);
+      --shadow-glow: 0 0 18px rgba(0, 255, 156, 0.35);
+      --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #07111f 0, #02040a 55%, #000000 100%);
+      color: var(--text-main);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .crt-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: linear-gradient(
+        rgba(0, 0, 0, 0.2) 1px,
+        transparent 1px
+      );
+      background-size: 100% 2px;
+      mix-blend-mode: soft-light;
+      opacity: 0.4;
+      z-index: 999;
+    }
+
+    .console {
+      width: 1100px;
+      max-width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border-soft);
+      background:
+        linear-gradient(135deg, rgba(0, 255, 156, 0.08), transparent 40%),
+        radial-gradient(circle at top left, rgba(0, 255, 156, 0.12), transparent 55%),
+        var(--panel);
+      box-shadow:
+        0 0 0 1px rgba(0, 255, 156, 0.15),
+        0 24px 60px rgba(0, 0, 0, 0.85),
+        var(--shadow-glow);
+      padding: 16px 18px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .console::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+        linear-gradient(0deg, var(--grid) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.25;
+      pointer-events: none;
+    }
+
+    .console-inner {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Top bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      border: 1px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      box-shadow: var(--shadow-glow);
+      background: radial-gradient(circle at 30% 0, rgba(0, 255, 156, 0.4), transparent 55%);
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .brand-title {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent-strong);
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 255, 156, 0.4);
+      background: radial-gradient(circle at 0 0, rgba(0, 255, 156, 0.25), transparent 60%);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--accent-strong);
+      font-family: var(--font-mono);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(0, 255, 156, 0.9);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.4); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 14px;
+    }
+
+    .panel {
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      background: radial-gradient(circle at top, rgba(0, 255, 156, 0.12), transparent 55%), #050915;
+      padding: 12px 12px 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(0, 255, 156, 0.12), transparent 60%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease-out;
+    }
+
+    .panel:hover::before {
+      opacity: 1;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .panel-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: var(--text-soft);
+    }
+
+    .panel-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 255, 156, 0.4);
+      color: var(--accent-strong);
+      background: rgba(0, 255, 156, 0.08);
+    }
+
+    .panel-body {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    /* Left main panel: radar + log */
+    .left-main {
+      display: grid;
+      grid-template-rows: 1.1fr 0.9fr;
+      gap: 10px;
+    }
+
+    .radar {
+      position: relative;
+      height: 210px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      background: radial-gradient(circle at center, rgba(0, 255, 156, 0.12), transparent 60%);
+      overflow: hidden;
+    }
+
+    .radar-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        radial-gradient(circle at center, transparent 0, transparent 40%, rgba(0, 255, 156, 0.15) 40%, transparent 41%),
+        radial-gradient(circle at center, transparent 0, transparent 65%, rgba(0, 255, 156, 0.12) 65%, transparent 66%),
+        linear-gradient(90deg, rgba(0, 255, 156, 0.12) 1px, transparent 1px),
+        linear-gradient(0deg, rgba(0, 255, 156, 0.12) 1px, transparent 1px);
+      background-size:
+        100% 100%,
+        100% 100%,
+        40px 40px,
+        40px 40px;
+      opacity: 0.5;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      inset: 0;
+      background: conic-gradient(
+        from 0deg,
+        rgba(0, 255, 156, 0.4),
+        transparent 45deg
+      );
+      animation: sweep 3s linear infinite;
+      transform-origin: center center;
+      mix-blend-mode: screen;
+    }
+
+    @keyframes sweep {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .radar-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(0, 255, 156, 0.9);
+    }
+
+    .radar-threat {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(255, 51, 102, 0.9);
+      animation: blink 1.2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.3; transform: scale(1.3); }
+    }
+
+    .radar-label {
+      position: absolute;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-soft);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      transform: translateY(-14px);
+      white-space: nowrap;
+    }
+
+    .log {
+      height: 150px;
+      border-radius: 10px;
+      border: 1px solid var(--border-soft);
+      background: #02040a;
+      padding: 8px 10px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-soft);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 6px;
+      align-items: baseline;
+      opacity: 0.85;
+    }
+
+    .log-time {
+      color: var(--accent-strong);
+      opacity: 0.7;
+    }
+
+    .log-tag {
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .log-tag--ok {
+      border-color: rgba(0, 255, 156, 0.6);
+      color: var(--accent-strong);
+    }
+
+    .log-tag--warn {
+      border-color: rgba(255, 204, 51, 0.7);
+      color: var(--warning);
+    }
+
+    .log-tag--danger {
+      border-color: rgba(255, 51, 102, 0.7);
+      color: var(--danger);
+    }
+
+    .log-text {
+      flex: 1;
+      color: var(--text-soft);
+    }
+
+    /* Right column panels */
+    .right-col {
+      display: grid;
+      grid-template-rows: auto auto auto;
+      gap: 10px;
+    }
+
+    .metrics {
+      display: flex;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .metric {
+      flex: 1;
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      padding: 6px 8px;
+      background: rgba(0, 0, 0, 0.4);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .metric-label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 9px;
+      margin-bottom: 4px;
+      color: var(--text-soft);
+    }
+
+    .metric-value {
+      font-size: 14px;
+      color: var(--accent-strong);
+    }
+
+    .metric-sub {
+      font-size: 10px;
+      color: var(--text-soft);
+      opacity: 0.8;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 255, 156, 0.5);
+      background: radial-gradient(circle at 0 0, rgba(0, 255, 156, 0.35), transparent 60%);
+      color: var(--accent-strong);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.18s ease-out, transform 0.12s ease-out, box-shadow 0.18s ease-out;
+    }
+
+    .btn:hover {
+      background: radial-gradient(circle at 0 0, rgba(0, 255, 156, 0.6), transparent 70%);
+      box-shadow: var(--shadow-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+      box-shadow: none;
+    }
+
+    .btn--danger {
+      border-color: rgba(255, 51, 102, 0.7);
+      color: var(--danger);
+      background: radial-gradient(circle at 0 0, rgba(255, 51, 102, 0.4), transparent 60%);
+    }
+
+    .btn--ghost {
+      border-color: rgba(255, 255, 255, 0.18);
+      color: var(--text-soft);
+      background: rgba(0, 0, 0, 0.4);
+    }
+
+    .btn-icon {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      border: 1px solid currentColor;
+    }
+
+    /* Quarantine list */
+    .quarantine-list {
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px dashed rgba(255, 255, 255, 0.18);
+      padding: 6px 8px;
+      max-height: 110px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 11px;
+    }
+
+    .q-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .q-item:last-child {
+      border-bottom: none;
+    }
+
+    .q-main {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .q-name {
+      color: var(--text-main);
+    }
+
+    .q-meta {
+      font-size: 10px;
+      color: var(--text-soft);
+    }
+
+    .q-tag {
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: var(--warning);
+    }
+
+    .q-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .q-btn {
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--text-soft);
+      font-family: var(--font-mono);
+      font-size: 9px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 2px 6px;
+      cursor: pointer;
+      transition: background 0.15s ease-out, color 0.15s ease-out, border-color 0.15s ease-out;
+    }
+
+    .q-btn--delete {
+      border-color: rgba(255, 51, 102, 0.7);
+      color: var(--danger);
+    }
+
+    .q-btn:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    /* Real-time protection toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 6px;
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 255, 156, 0.6);
+      background: rgba(0, 0, 0, 0.7);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 2px;
+    }
+
+    .toggle-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 10px rgba(0, 255, 156, 0.9);
+      transform: translateX(0);
+      transition: transform 0.18s ease-out, background 0.18s ease-out, box-shadow 0.18s ease-out;
+    }
+
+    .toggle.off {
+      border-color: rgba(255, 51, 102, 0.7);
+    }
+
+    .toggle.off .toggle-knob {
+      transform: translateX(22px);
+      background: var(--danger);
+      box-shadow: 0 0 10px rgba(255, 51, 102, 0.9);
+    }
+
+    .toggle-label {
+      margin-left: 8px;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-size: 10px;
+    }
+
+    /* Scheduled scans timeline */
+    .timeline {
+      margin-top: 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border-soft);
+      padding: 6px 8px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-soft);
+    }
+
+    .timeline-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 0;
+    }
+
+    .timeline-label {
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .timeline-time {
+      color: var(--accent-strong);
+    }
+
+    .timeline-type {
+      color: var(--warning);
+    }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .left-main {
+        grid-template-rows: auto auto;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+      .btn-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="crt-overlay"></div>
+
+  <div class="console">
+    <div class="console-inner">
+      <!-- TOP BAR -->
+      <div class="top-bar">
+        <div class="brand">
+          <div class="brand-logo">AV</div>
+          <div class="brand-text">
+            <div class="brand-title">CYBER OPS ANTIVIRUS</div>
+            <div class="brand-sub">Threat Intelligence · Endpoint Shield</div>
+          </div>
+        </div>
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          <span id="global-status-label">Protection en temps réel : ACTIVE</span>
+        </div>
+      </div>
+
+      <!-- MAIN GRID -->
+      <div class="grid">
+        <!-- LEFT: Detection + Logs -->
+        <div class="left-main">
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Détection & suppression des malwares</div>
+              <div class="panel-badge">Heuristique + Signatures</div>
+            </div>
+            <div class="panel-body">
+              <div class="radar" id="radar">
+                <div class="radar-grid"></div>
+                <div class="radar-sweep"></div>
+                <div class="radar-center"></div>
+                <!-- Threats injected by JS -->
+              </div>
+              <div class="metrics">
+                <div class="metric">
+                  <div class="metric-label">Menaces bloquées</div>
+                  <div class="metric-value" id="metric-blocked">0</div>
+                  <div class="metric-sub">Depuis le démarrage</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Objets analysés</div>
+                  <div class="metric-value" id="metric-scanned">0</div>
+                  <div class="metric-sub">Fichiers, processus, flux réseau</div>
+                </div>
+                <div class="metric">
+                  <div class="metric-label">Score d’intégrité</div>
+                  <div class="metric-value" id="metric-integrity">100%</div>
+                  <div class="metric-sub">Système global</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Journal des événements</div>
+              <div class="panel-badge">Temps réel</div>
+            </div>
+            <div class="panel-body">
+              <div class="log" id="log"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Real-time, Scans, Quarantine -->
+        <div class="right-col">
+          <!-- REAL-TIME PROTECTION -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Protection en temps réel</div>
+              <div class="panel-badge">Surveillance continue</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                Surveille les fichiers, processus et téléchargements pour bloquer immédiatement toute activité suspecte
+                avant qu’elle n’endommage le système.
+              </p>
+              <div class="toggle-row">
+                <span>État de la protection</span>
+                <div style="display:flex;align-items:center;">
+                  <div class="toggle" id="realtime-toggle">
+                    <div class="toggle-knob"></div>
+                  </div>
+                  <span class="toggle-label" id="realtime-label">ON</span>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button class="btn" id="btn-simulate-attack">
+                  <span class="btn-icon"></span>
+                  Simuler une attaque
+                </button>
+                <button class="btn btn--ghost" id="btn-clear-log">
+                  Effacer le journal
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SCANS -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Analyses programmées & manuelles</div>
+              <div class="panel-badge">Planification</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                Lancez une analyse complète ou ciblée, et consultez les prochaines analyses programmées.
+              </p>
+              <div class="btn-row">
+                <button class="btn" id="btn-full-scan">
+                  <span class="btn-icon"></span>
+                  Analyse complète
+                </button>
+                <button class="btn" id="btn-quick-scan">
+                  <span class="btn-icon"></span>
+                  Analyse rapide
+                </button>
+              </div>
+              <div class="timeline">
+                <div class="timeline-row">
+                  <span class="timeline-label">Prochaine analyse complète</span>
+                  <span class="timeline-time">03:00 · Quotidien</span>
+                </div>
+                <div class="timeline-row">
+                  <span class="timeline-label">Analyse rapide</span>
+                  <span class="timeline-time">À chaque connexion</span>
+                </div>
+                <div class="timeline-row">
+                  <span class="timeline-label">Analyse ciblée</span>
+                  <span class="timeline-type">Sur demande</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- QUARANTINE -->
+          <div class="panel">
+            <div class="panel-header">
+              <div class="panel-title">Quarantaine</div>
+              <div class="panel-badge">Isolation sécurisée</div>
+            </div>
+            <div class="panel-body">
+              <p>
+                Les fichiers suspects sont isolés pour éviter toute propagation ou dommage jusqu’à leur suppression
+                sécurisée ou leur restauration.
+              </p>
+              <div class="quarantine-list" id="quarantine-list">
+                <!-- Items injected by JS -->
+              </div>
+              <div class="btn-row">
+                <button class="btn btn--danger" id="btn-delete-all">
+                  <span class="btn-icon"></span>
+                  Supprimer tout
+                </button>
+                <button class="btn btn--ghost" id="btn-release-all">
+                  Libérer tout
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div> <!-- /grid -->
+    </div>
+  </div>
+
+  <script>
+    // Simple cyber-ops simulation logic
+
+    const logEl = document.getElementById("log");
+    const radarEl = document.getElementById("radar");
+    const quarantineListEl = document.getElementById("quarantine-list");
+
+    const metricBlockedEl = document.getElementById("metric-blocked");
+    const metricScannedEl = document.getElementById("metric-scanned");
+    const metricIntegrityEl = document.getElementById("metric-integrity");
+    const globalStatusLabel = document.getElementById("global-status-label");
+
+    const realtimeToggle = document.getElementById("realtime-toggle");
+    const realtimeLabel = document.getElementById("realtime-label");
+
+    const btnSimulateAttack = document.getElementById("btn-simulate-attack");
+    const btnClearLog = document.getElementById("btn-clear-log");
+    const btnFullScan = document.getElementById("btn-full-scan");
+    const btnQuickScan = document.getElementById("btn-quick-scan");
+    const btnDeleteAll = document.getElementById("btn-delete-all");
+    const btnReleaseAll = document.getElementById("btn-release-all");
+
+    let blockedCount = 0;
+    let scannedCount = 0;
+    let integrityScore = 100;
+    let realtimeEnabled = true;
+    let quarantineItems = [];
+
+    function nowTime() {
+      const d = new Date();
+      return d.toTimeString().slice(0, 8);
+    }
+
+    function addLog(tag, level, text) {
+      const line = document.createElement("div");
+      line.className = "log-line";
+
+      const time = document.createElement("span");
+      time.className = "log-time";
+      time.textContent = "[" + nowTime() + "]";
+
+      const tagEl = document.createElement("span");
+      tagEl.className = "log-tag";
+      if (level === "ok") tagEl.classList.add("log-tag--ok");
+      if (level === "warn") tagEl.classList.add("log-tag--warn");
+      if (level === "danger") tagEl.classList.add("log-tag--danger");
+      tagEl.textContent = tag;
+
+      const textEl = document.createElement("span");
+      textEl.className = "log-text";
+      textEl.textContent = text;
+
+      line.appendChild(time);
+      line.appendChild(tagEl);
+      line.appendChild(textEl);
+
+      logEl.appendChild(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function updateMetrics() {
+      metricBlockedEl.textContent = blockedCount;
+      metricScannedEl.textContent = scannedCount;
+      metricIntegrityEl.textContent = integrityScore + "%";
+    }
+
+    function randomThreatName() {
+      const families = ["Trojan", "Ransomware", "Spyware", "Worm", "Rootkit", "Adware"];
+      const targets = ["SYS32", "BOOT", "USERDOCS", "REGISTRY", "BROWSER", "MEMORY"];
+      const suffix = Math.floor(Math.random() * 9999)
+        .toString()
+        .padStart(4, "0");
+      return families[Math.floor(Math.random() * families.length)] +
+        "." +
+        targets[Math.floor(Math.random() * targets.length)] +
+        "." +
+        suffix;
+    }
+
+    function spawnRadarThreat(threatName) {
+      const threat = document.createElement("div");
+      threat.className = "radar-threat";
+
+      const label = document.createElement("div");
+      label.className = "radar-label";
+      label.textContent = threatName;
+
+      // random position in radar
+      const r = 80 * Math.random();
+      const angle = Math.random() * Math.PI * 2;
+      const x = 50 + (r * Math.cos(angle)) / 2;
+      const y = 50 + (r * Math.sin(angle)) / 2;
+
+      threat.style.left = x + "%";
+      threat.style.top = y + "%";
+      label.style.left = x + "%";
+      label.style.top = y + "%";
+
+      radarEl.appendChild(threat);
+      radarEl.appendChild(label);
+
+      // auto-remove after some time
+      setTimeout(() => {
+        threat.remove();
+        label.remove();
+      }, 6000);
+    }
+
+    function addToQuarantine(threatName) {
+      const item = {
+        id: Date.now() + "-" + Math.random().toString(16).slice(2),
+        name: threatName,
+        path: "C:/Users/Public/Downloads/" + threatName + ".bin",
+        risk: ["Élevé", "Critique", "Moyen"][Math.floor(Math.random() * 3)]
+      };
+      quarantineItems.unshift(item);
+      renderQuarantine();
+    }
+
+    function renderQuarantine() {
+      quarantineListEl.innerHTML = "";
+      if (quarantineItems.length === 0) {
+        const empty = document.createElement("div");
+        empty.style.fontSize = "11px";
+        empty.style.color = "#7f9bb5";
+        empty.textContent = "Aucun élément en quarantaine.";
+        quarantineListEl.appendChild(empty);
+        return;
+      }
+
+      quarantineItems.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "q-item";
+
+        const main = document.createElement("div");
+        main.className = "q-main";
+
+        const name = document.createElement("div");
+        name.className = "q-name";
+        name.textContent = item.name;
+
+        const meta = document.createElement("div");
+        meta.className = "q-meta";
+        meta.textContent = item.path;
+
+        main.appendChild(name);
+        main.appendChild(meta);
+
+        const tag = document.createElement("div");
+        tag.className = "q-tag";
+        tag.textContent = "Risque : " + item.risk;
+
+        const actions = document.createElement("div");
+        actions.className = "q-actions";
+
+        const btnRestore = document.createElement("button");
+        btnRestore.className = "q-btn";
+        btnRestore.textContent = "Restaurer";
+        btnRestore.onclick = () => {
+          quarantineItems = quarantineItems.filter((q) => q.id !== item.id);
+          addLog("RESTORE", "warn", "Fichier restauré depuis la quarantaine : " + item.name);
+          renderQuarantine();
+        };
+
+        const btnDelete = document.createElement("button");
+        btnDelete.className = "q-btn q-btn--delete";
+        btnDelete.textContent = "Supprimer";
+        btnDelete.onclick = () => {
+          quarantineItems = quarantineItems.filter((q) => q.id !== item.id);
+          addLog("DELETE", "danger", "Fichier supprimé définitivement : " + item.name);
+          renderQuarantine();
+        };
+
+        actions.appendChild(btnRestore);
+        actions.appendChild(btnDelete);
+
+        row.appendChild(main);
+        row.appendChild(tag);
+        row.appendChild(actions);
+
+        quarantineListEl.appendChild(row);
+      });
+    }
+
+    function simulateThreatDetection(source) {
+      scannedCount += Math.floor(20 + Math.random() * 80);
+      const threatName = randomThreatName();
+      spawnRadarThreat(threatName);
+
+      if (realtimeEnabled) {
+        blockedCount++;
+        integrityScore = Math.max(80, integrityScore - Math.floor(Math.random() * 3));
+        addLog("BLOCK", "danger", "Menace détectée et bloquée (" + source + ") : " + threatName);
+        addToQuarantine(threatName);
+      } else {
+        integrityScore = Math.max(60, integrityScore - Math.floor(5 + Math.random() * 10));
+        addLog("MISS", "warn", "Menace détectée mais non bloquée (protection désactivée) : " + threatName);
+      }
+
+      updateMetrics();
+    }
+
+    // Real-time background scanning simulation
+    setInterval(() => {
+      scannedCount += Math.floor(5 + Math.random() * 15);
+      if (realtimeEnabled && Math.random() < 0.18) {
+        simulateThreatDetection("surveillance temps réel");
+      } else {
+        updateMetrics();
+      }
+    }, 2000);
+
+    // Toggle real-time protection
+    realtimeToggle.addEventListener("click", () => {
+      realtimeEnabled = !realtimeEnabled;
+      realtimeToggle.classList.toggle("off", !realtimeEnabled);
+      realtimeLabel.textContent = realtimeEnabled ? "ON" : "OFF";
+      globalStatusLabel.textContent = realtimeEnabled
+        ? "Protection en temps réel : ACTIVE"
+        : "Protection en temps réel : DÉSACTIVÉE";
+
+      addLog(
+        "RT-PROTECT",
+        realtimeEnabled ? "ok" : "warn",
+        realtimeEnabled
+          ? "Protection en temps réel activée."
+          : "Protection en temps réel désactivée. Le système est vulnérable."
+      );
+    });
+
+    // Simulate attack button
+    btnSimulateAttack.addEventListener("click", () => {
+      simulateThreatDetection("attaque simulée");
+    });
+
+    // Clear log
+    btnClearLog.addEventListener("click", () => {
+      logEl.innerHTML = "";
+      addLog("SYSTEM", "ok", "Journal réinitialisé.");
+    });
+
+    // Full scan
+    btnFullScan.addEventListener("click", () => {
+      addLog("SCAN", "ok", "Analyse complète du système démarrée.");
+      let steps = 5;
+      let i = 0;
+      const interval = setInterval(() => {
+        scannedCount += 200 + Math.floor(Math.random() * 200);
+        if (Math.random() < 0.4) {
+          simulateThreatDetection("analyse complète");
+        } else {
+          updateMetrics();
+        }
+        i++;
+        if (i >= steps) {
+          clearInterval(interval);
+          addLog("SCAN", "ok", "Analyse complète terminée. Aucun élément critique restant.");
+          integrityScore = Math.min(100, integrityScore + 5);
+          updateMetrics();
+        }
+      }, 900);
+    });
+
+    // Quick scan
+    btnQuickScan.addEventListener("click", () => {
+      addLog("SCAN", "ok", "Analyse rapide démarrée (zones sensibles).");
+      let steps = 3;
+      let i = 0;
+      const interval = setInterval(() => {
+        scannedCount += 80 + Math.floor(Math.random() * 120);
+        if (Math.random() < 0.5) {
+          simulateThreatDetection("analyse rapide");
+        } else {
+          updateMetrics();
+        }
+        i++;
+        if (i >= steps) {
+          clearInterval(interval);
+          addLog("SCAN", "ok", "Analyse rapide terminée.");
+          integrityScore = Math.min(100, integrityScore + 3);
+          updateMetrics();
+        }
+      }, 700);
+    });
+
+    // Delete all quarantine
+    btnDeleteAll.addEventListener("click", () => {
+      if (quarantineItems.length === 0) return;
+      const count = quarantineItems.length;
+      quarantineItems = [];
+      renderQuarantine();
+      addLog("DELETE", "danger", "Suppression définitive de " + count + " élément(s) en quarantaine.");
+    });
+
+    // Release all quarantine
+    btnReleaseAll.addEventListener("click", () => {
+      if (quarantineItems.length === 0) return;
+      const count = quarantineItems.length;
+      quarantineItems = [];
+      renderQuarantine();
+      addLog("RESTORE", "warn", "Restauration de " + count + " élément(s) en quarantaine (non recommandé).");
+      integrityScore = Math.max(60, integrityScore - 10);
+      updateMetrics();
+    });
+
+    // Initial state
+    renderQuarantine();
+    addLog("SYSTEM", "ok", "Moteur antivirus initialisé. Protection en temps réel active.");
+    updateMetrics();
+  </script>
+</body>
+</html>
